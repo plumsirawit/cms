@@ -70,7 +70,7 @@ $(document).ready(function () {
                         {% trans first_name=user.first_name,
                                  last_name=user.last_name,
                                  username=user.username %}
-                            Logged in as <strong>{{ first_name }} {{ last_name }}</strong> <em>({{ username }})</em>
+                            Logged in as <strong>{{ username }}</strong>
                         {% endtrans %}
                     </p>
 {% endif %}
@@ -87,6 +87,9 @@ $(document).ready(function () {
         </div>
     {% endif %}
         <div class="login_container">
+            <div class="login_logo">
+                <img src="/static/img/thaco.png" alt=""/>
+            </div>
             <div class="login_box hero-unit">
                 <h1>{% trans %}Welcome{% endtrans %}</h1>
                 <p>{% trans %}Please log in{% endtrans %}</p>
@@ -118,7 +121,7 @@ $(document).ready(function () {
                     </fieldset>
                 </form>
                 {% if contest.allow_registration %}
-                <p style="margin: 9px 0 0;">
+                <p style="margin: 9px 0 0; display: none;">
                     {% trans %}Don't have an account?{% endtrans %} <a href="{{ contest_url('register') }}">{% trans %}Register{% endtrans %}</a>
                 </p>
                 {% endif %}

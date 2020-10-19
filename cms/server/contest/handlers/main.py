@@ -36,7 +36,7 @@ import tornado.web
 from sqlalchemy.orm.exc import NoResultFound
 
 from cms import config
-from cms.db import PrintJob, User, Participation, Team
+from cms.db import PrintJob, User, Participation, Team, Contest
 from cms.grading.steps import COMPILATION_MESSAGES, EVALUATION_MESSAGES
 from cms.server import multi_contest
 from cms.server.contest.authentication import validate_login
@@ -76,6 +76,9 @@ class RegistrationHandler(ContestHandler):
     MAX_INPUT_LENGTH = 50
     MIN_PASSWORD_LENGTH = 6
 
+    def check_xsrf_cookie(self):
+        pass
+
     @multi_contest
     def post(self):
         if not self.contest.allow_registration:
@@ -87,9 +90,14 @@ class RegistrationHandler(ContestHandler):
             username = self.get_argument("username")
             password = self.get_argument("password")
             email = self.get_argument("email")
+            is_hidden = self.get_argument("is_hidden")
+            secret = self.get_argument("secret")
+
             if len(email) == 0:
                 email = None
 
+            if secret != 'Z7J6kZ9LAiLpEb$8H$YWgxVthwf#%W*G':
+                raise ValueError()
             if not 1 <= len(first_name) <= self.MAX_INPUT_LENGTH:
                 raise ValueError()
             if not 1 <= len(last_name) <= self.MAX_INPUT_LENGTH:
@@ -101,11 +109,16 @@ class RegistrationHandler(ContestHandler):
             if not self.MIN_PASSWORD_LENGTH <= len(password) \
                     <= self.MAX_INPUT_LENGTH:
                 raise ValueError()
+            if is_hidden != "true" and is_hidden != "false":
+                raise ValueError()
         except (tornado.web.MissingArgumentError, ValueError):
             raise tornado.web.HTTPError(400)
 
         # Override password with its hash
         password = hash_password(password)
+
+        # Override is_hidden with its boolean value
+        is_hidden = True if is_hidden == 'true' else False
 
         # If we have teams, we assume that the 'team' field is mandatory
         if self.sql_session.query(Team).count() > 0:
@@ -130,9 +143,17 @@ class RegistrationHandler(ContestHandler):
         user = User(first_name, last_name, username, password, email=email)
         self.sql_session.add(user)
 
-        participation = Participation(user=user, contest=self.contest,
-                                      team=team)
-        self.sql_session.add(participation)
+        # Select the contest specified on the command line
+        for contest_id in range(1, 6):
+            contest = Contest.get_from_id(contest_id, self.sql_session)
+            participation = Participation(user=user, contest=contest,
+                                          team=team, hidden=is_hidden)
+            self.sql_session.add(participation)
+            
+
+        # participation = Participation(user=user, contest=self.contest,
+        #                               team=team, hidden=is_hidden)
+        # self.sql_session.add(participation)
 
         self.sql_session.commit()
 
@@ -140,6 +161,7 @@ class RegistrationHandler(ContestHandler):
 
     @multi_contest
     def get(self):
+        raise tornado.web.HTTPError(404)
         if not self.contest.allow_registration:
             raise tornado.web.HTTPError(404)
 
